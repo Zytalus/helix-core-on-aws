@@ -133,3 +133,6 @@ dmypy.json
 
 # CDK Build Folder
 /cdk.out
+
+# Configuration files
+/config.py

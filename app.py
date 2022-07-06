@@ -1,4 +1,5 @@
 import os.path
+import config
 
 from aws_cdk.aws_s3_assets import Asset
 
@@ -13,13 +14,13 @@ from constructs import Construct
 dirname = os.path.dirname(__file__)
 
 
-class EC2InstanceStack(Stack):
+class GameStudioStack(Stack):
 
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # VPC
-        vpc = ec2.Vpc(self, "VPC",
+        vpc = ec2.Vpc(self, "GameStudioVPC",
                       nat_gateways=0,
                       subnet_configuration=[ec2.SubnetConfiguration(name="public", subnet_type=ec2.SubnetType.PUBLIC)]
                       )
@@ -33,16 +34,30 @@ class EC2InstanceStack(Stack):
         )
 
         # Instance Role and SSM Managed Policy
-        role = iam.Role(self, "InstanceSSM", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"))
+        role = iam.Role(self, config.project_name + "SSM", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"))
 
         role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
 
+        # Security Group
+        helix_sg = ec2.SecurityGroup(self, "helixSG",
+                                     vpc=vpc
+                                     )
+        for a in config.allowed_list:
+            helix_sg.add_ingress_rule(ec2.Peer.ipv4(a + '/32'), ec2.Port.tcp(1666),
+                                      "allow ssh access from the VPC")
+
         # Instance
-        instance = ec2.Instance(self, "Instance",
-                                instance_type=ec2.InstanceType("t3.nano"),
+        instance = ec2.Instance(self, "helix-core",
+                                instance_type=ec2.InstanceType(config.instance_type),
                                 machine_image=amzn_linux,
+                                security_group=helix_sg,
                                 vpc=vpc,
-                                role=role
+                                role=role,
+                                block_devices=[ec2.BlockDevice(
+                                    device_name="/dev/sdb",
+                                    volume=ec2.BlockDeviceVolume.ebs(config.project_size)
+                                )
+                                ]
                                 )
 
         # Script in S3 as Asset
@@ -60,6 +75,6 @@ class EC2InstanceStack(Stack):
 
 
 app = App()
-EC2InstanceStack(app, "ec2-instance")
+GameStudioStack(app, config.project_name)
 
 app.synth()
