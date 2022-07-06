@@ -20,7 +20,7 @@ class GameStudioStack(Stack):
         super().__init__(scope, id, **kwargs)
 
         # VPC
-        vpc = ec2.Vpc(self, "GameStudioVPC",
+        vpc = ec2.Vpc(self, (config.project_name + "-VPC"),
                       nat_gateways=0,
                       subnet_configuration=[ec2.SubnetConfiguration(name="public", subnet_type=ec2.SubnetType.PUBLIC)]
                       )
@@ -39,15 +39,15 @@ class GameStudioStack(Stack):
         role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
 
         # Security Group
-        helix_sg = ec2.SecurityGroup(self, "helixSG",
+        helix_sg = ec2.SecurityGroup(self, "helix-core-SG",
                                      vpc=vpc
                                      )
         for a in config.allowed_list:
             helix_sg.add_ingress_rule(ec2.Peer.ipv4(a + '/32'), ec2.Port.tcp(1666),
-                                      "allow ssh access from the VPC")
+                                      "allow access to helix core server")
 
         # Instance
-        instance = ec2.Instance(self, "helix-core",
+        instance = ec2.Instance(self, (config.project_name + "-helix-core"),
                                 instance_type=ec2.InstanceType(config.instance_type),
                                 machine_image=amzn_linux,
                                 security_group=helix_sg,
@@ -75,6 +75,6 @@ class GameStudioStack(Stack):
 
 
 app = App()
-GameStudioStack(app, config.project_name)
+GameStudioStack(app, "GameStudio")
 
 app.synth()
