@@ -130,3 +130,6 @@ dmypy.json
 
 # Pycharm Settings
 .idea
+
+# CDK Build Folder
+/cdk.out
