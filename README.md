@@ -1,5 +1,6 @@
 # helix-core-on-aws
 This project will deploy a perforce helix core server to AWS.
+![Achitecture Diagram](/ArchitectureDiagram.png)
 
 # How to deploy stack
 This guide assumes you have AWS CLI, Node, and Python installed and AWS CLI has been configured for your aws account.
